@@ -2,7 +2,7 @@
 
 ## Select the compiler
 
-Run `mk version` first. Record the Mk release, build ID, host and selected LLVM directory when investigating behavior across machines. The signed release bundle includes Mk, its tested clang and lld, and documentation. A source build of the baseline requires Go 1.27 or newer and LLVM 21 or newer. Check `go.mod` and the README for the revision being built. [Upstream build and installation instructions](https://github.com/zerodayokay/Mk-Lang/blob/559c14cd1f84f67b1c7a6082a4d57989a2d564e1/README.md#getting-started)
+Run `mk version` first. Record the Mk release, build ID, host and selected LLVM directory when investigating behavior across machines. The signed release bundle includes Mk, its tested clang and lld, and documentation. A source build of the baseline requires Go 1.27 or newer and LLVM 21 or newer. Check `go.mod` and the README for the revision being built. [Upstream build and installation instructions](https://github.com/zerodayokay/Mk-Lang/blob/7d05aef3821b5f1349fbb18b136ea18ade445810/README.md#getting-started)
 
 From a checkout of `zerodayokay/Mk-Lang` on a Unix-like host:
 
@@ -22,6 +22,8 @@ On Windows build `mk.exe`. Use the resulting executable by absolute path or put 
 - Import the module and qualify its exports. A directory segment named `internal` restricts use to the package. Keep dependencies acyclic. Multiple executables can have distinct bin roots and share a domain module. A library for other Mk code can export functions without a `Main`. Native static/dynamic library outputs use the manifest's bin `kind` and C ABI exports.
 - Inside the `deps` array, `pkg.Dep(name: "ledgerlib", path: "../ledgerlib")` selects a local package. Import its root as `ledgerlib` or its submodule by a qualified path. For a tagged remote use the `source` and `version` fields. The selected versions follow the reachable minimum requirements. Commit the generated `pkg.sum` for fetched dependencies. It records integrity hashes. `mk tree` and `mk why NAME` explain selection.
 - In a workspace, list member directories in the root manifest's `members`. From the workspace root, `mk check ./...`, `mk test ./...` and `mk build ./...` address all members. Use `--locked` for existing sums and `--offline` when dependencies are already cached or vendored.
+
+For native APIs, `mk sdk views` lists the declarations bundled for each target. On x86-64 and AArch64 Linux, a reachable versioned function from `import c.posix` links glibc automatically. On `x86_64-windows`, use `pkg.Link(kind: "lazy", ...)` for an optional DLL and `dl.Present(io, f)` before calling an optional symbol. For a library that ships its own headers, put its package-relative include directories in `pkg.CImport.include_dirs` so the binding, shim and C sources find the same headers. See the upstream [system views and C imports](https://github.com/zerodayokay/Mk-Lang/blob/7d05aef3821b5f1349fbb18b136ea18ade445810/doc/reference.md#system-views).
 
 ## Verify an application through its entry point
 
@@ -43,14 +45,16 @@ Both executions should print `1: pear` and `3: pear tart` on separate lines and 
 
 ## Find implementations with the right dependencies
 
-Start from the installed compiler. `mk query modules` lists the modules, `mk query sig Name` shows flows and errors, and `mk doc std.MOD` prints a module's public surface. Queries accept `--root DIR`. For larger tasks the following paths in the checked-out repository give complete call sites and their tests.
+Start from the installed compiler. `mk query modules` lists the modules, `mk query sig Name` shows flows and errors, and `mk doc std.MOD` prints a module's public surface. Use `mk query sig --member NAME --json` for signatures and doc comments across a workspace member, including generated items. Queries accept `--root DIR`. For larger tasks the following paths in the checked-out repository give complete call sites and their tests.
 
 | Application need | Starting point |
 | --- | --- |
 | CLI flags and usage | `std.cli`, `gen cli.Args(Options)`, and `Dogfoods/mgrep`. Use `sys.args[1..]` when calling a generated option parser. |
 | Parsing and serialization | `std.text`, `std.csv`, `std.json`, and the “Parse JSON into a struct” recipe in `doc/cookbook.md`. `gen json.Codec(T)` generates typed conversions. |
-| Network and services | `std.net`, `std.http`, `std.websocket`, or the first-party package under `kits/web`. `Dogfoods/chat` contains task and channel lifetimes. Check each package's manifest for dependencies. |
+| Network and services | `Dogfoods/fetch` and `Dogfoods/relay` exercise HTTP/2 and HTTP/3 through `std.http`, with experimental `std.quic` for QUIC. `Dogfoods/chat` shows WebSocket, task and channel lifetimes. See `kits/web` for the first-party web package. |
+| Windows, rendering and image files | `Dogfoods/scene` and `Dogfoods/sketch` use experimental `std.window` and `std.gpu`. Check the backend requirements for the target. For PNG I/O or pixel comparisons, see provisional `std.image`. |
+| SQLite and C sources | `Dogfoods/notes` builds its bundled SQLite from a fresh checkout and exposes a JSON API. Read its manifest alongside its Mk wrapper when packaging native sources. |
 | Storage and crash recovery | `std.fs`, `std.sim`, and `Dogfoods/kvd` for file operations, fault injection and replay. |
 | Larger parsers and interpreters | `Dogfoods/lox` has a parser, arena-backed syntax tree and bytecode VM with executable cases. |
 
-Use the nearest example's manifest, import lines and tests together when adapting it. Upstream's [package guide](https://github.com/zerodayokay/Mk-Lang/blob/559c14cd1f84f67b1c7a6082a4d57989a2d564e1/doc/packages.md), [standard-library index](https://github.com/zerodayokay/Mk-Lang/blob/559c14cd1f84f67b1c7a6082a4d57989a2d564e1/doc/std/README.md) and [complete applications](https://github.com/zerodayokay/Mk-Lang/tree/559c14cd1f84f67b1c7a6082a4d57989a2d564e1/Dogfoods) cover the surrounding APIs and platform requirements.
+Use the nearest example's manifest, import lines and tests together when adapting it. Upstream's [package guide](https://github.com/zerodayokay/Mk-Lang/blob/7d05aef3821b5f1349fbb18b136ea18ade445810/doc/packages.md), [standard-library index](https://github.com/zerodayokay/Mk-Lang/blob/7d05aef3821b5f1349fbb18b136ea18ade445810/doc/std/README.md) and [complete applications](https://github.com/zerodayokay/Mk-Lang/tree/7d05aef3821b5f1349fbb18b136ea18ade445810/Dogfoods) cover the surrounding APIs and platform requirements.

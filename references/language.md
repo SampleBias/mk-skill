@@ -18,8 +18,9 @@ A newline ends a statement when the grammar permits. Use braces for control flow
 ## Loops, arrays and collections
 
 - `[4]int` is an inline array. `var a: [4]int = [0; 4]` initializes it. `a[lo..hi]` is a half-open shared slice, `a[..]` views the whole array, and `mut a[..]` gives a writable slice of a mutable array. Indexing checks bounds. Use `Get` for a lookup that can miss.
-- `for i in 0..n` counts, `for x in xs` visits elements by value, and `for i, x in xs` includes the index for arrays, slices and lists. For an iterator such as `s.Lines()`, use `for line in s.Lines()` and keep an explicit counter if needed.
-- Use `for x in &xs` to borrow elements and `for x in mut xs` to mutate through each reference. `for condition { ... }` and `for { ... }` cover conditional and indefinite loops. `if` and `match` can yield values. Ranges exclude their upper bound.
+- Use `[left, right] := pair` to unpack a fixed two-element array. Each binding takes ownership of its element if it is linear. The pattern needs one name for every element and a length known where it is checked.
+- `for i in 0..n` counts up to the exclusive upper bound, `for x in xs` visits elements by value, and `for i, x in xs` includes the index for arrays, slices and lists. For an iterator such as `s.Lines()`, use `for line in s.Lines()` and keep an explicit counter if needed.
+- Use `for x in &xs` to borrow elements and `for x in mut xs` to mutate through each reference. `for condition { ... }` and `for { ... }` cover conditional and indefinite loops. A value-producing `if` or `match` can also be an operand, as in `xs[if reverse { 1 } else { 0 }]`.
 - `var xs := List[int].New(a)` makes an arena-backed growable list. `try xs.Push(value)` can exhaust the arena. For a counter table, `var counts := Map[str, int].New(a)`, then `entry := try counts.Ensure(word, 0)` and `*entry += 1`. Retaining a text key retains its source. When output order matters, explicitly order the keys or entries.
 
 ## Optionals and generics
@@ -45,7 +46,9 @@ The `Plain` bound lets `Last` copy an element out of a shared slice. To compare 
 
 ## Domain errors and exhaustive decisions
 
-Use `error` for failures the caller can distinguish. Payloads can carry plain, reference-free facts such as an offset or a rejected number. Combine errors with `|`. `E!T` is a result, `fail` constructs its error path, and `try` propagates that path. A caller can recover with `operation() else e { ... }` or inspect both branches with `match`. Reserve `.Must()` for an established invariant, since a missing or failed value panics.
+Use `error` for failures the caller can distinguish. An error can carry an offset, a rejected number, or a direct `str` field whose text lives for the whole program. For example, `error Unsupported(feature: str)` can carry a string literal. Supplying a borrowed parameter as its text yields E0605. For input-specific messages, carry the offset and let the caller format the original input.
+
+Combine errors with `|`. `E!T` is a result, `fail` constructs its error path, and `try` propagates that path. A caller can recover with `operation() else e { ... }` or inspect both branches with `match`. To keep a result for later, declare its type explicitly, as in `r: Outside!Band = Classify(n)`. Handle it or pass it on along every path before overwriting it or leaving scope (E0802). Reserve `.Must()` for an established invariant, since a missing or failed value panics.
 
 ```mk
 enum Band {
@@ -81,8 +84,8 @@ test "boundary and rejected input" {
 }
 ```
 
-In the negative test, `Outside(value)` binds the error's payload field. Use `Outside(value: _)` when only the kind matters. The test fails if the invalid input unexpectedly succeeds.
+In the negative test, `Outside(value)` binds the error's payload field. Use `Outside(value: _)` when only the kind matters. The test fails if the invalid input unexpectedly succeeds. In a `match`, a named integer, boolean, character or string constant compares by value. Use `.Name` for enum variants, `module.Name` for another module's constant, and `snake_case` for a new binding.
 
-A test can use `try`. An error that escapes it fails the test. An error that escapes hosted `Main` prints a diagnostic and gives status 1. Return `int` or `E!int` when the command has an exit-status contract. A module can export its own `type Error` union for its public API. For a public error set marked `open`, include the required fallback when matching it from another package.
+A test can use `try`. An error that escapes it fails the test. An error that escapes hosted `Main` prints a diagnostic and gives status 1. Return `int` or `E!int` when the command has an exit-status contract. A module can export its own `type Error` union for its public API. Matching an open error set from another package needs a `_` arm (E0306), including for `std.runtime.Error` and `std.vm.Error`.
 
-For remaining syntax, consult the matching checkout's [language reference](https://github.com/zerodayokay/Mk-Lang/blob/559c14cd1f84f67b1c7a6082a4d57989a2d564e1/doc/reference.md) and [grammar](https://github.com/zerodayokay/Mk-Lang/blob/559c14cd1f84f67b1c7a6082a4d57989a2d564e1/doc/grammar.md).
+For remaining syntax, consult the matching checkout's [language reference](https://github.com/zerodayokay/Mk-Lang/blob/7d05aef3821b5f1349fbb18b136ea18ade445810/doc/reference.md) and [grammar](https://github.com/zerodayokay/Mk-Lang/blob/7d05aef3821b5f1349fbb18b136ea18ade445810/doc/grammar.md).

@@ -19,6 +19,7 @@ A fallible call consumes a non-plain by-value argument on success. On failure th
 - A short-lived CLI can read text into `sys.arena`. For repeated requests or batches, use a local `var scratch := try Arena.New(sys.heap)` or a sub-arena from `try parent.Sub()`. Place `defer scratch.Free()` in the request's block. Release or reset an arena only after the last use of its borrowed data.
 - To return independently stored text, accept the destination arena from the caller and use `try dest.Dup(text)` or `try dest.Fmt(...)`. The returned owned bytes live in that arena and the `str` is a view of them. Returning a slice of a local array or a local scratch arena would leave a dangling view.
 - For an independently owned collection, take an allocator from `sys.heap.Alloc()`. For example, `HeapList[int].New(alloc)` gives a linear owner. Growth takes the allocator (`try list.Push(alloc, x)`), and the eventual owner calls `list.Free(alloc)`. A function constructing and returning the list can register `onerr list.Free(alloc)` while building it.
+- Storing a linear resource such as an open file in an arena `List` or with `Arena.Put` is E0701. Use a `HeapList` for owned handles. Drain and release them before calling `FreeEmpty`, or supply a release callback to `FreeEach`. A generic helper that copies elements into an arena list can require `T: Plain`.
 - A mutable borrow includes accesses through holders such as list element views and references returned by map lookups. Copy a needed number before growing or mutating its container. Distinct fields can be borrowed separately. For two mutable elements in one slice, obtain disjoint references with `GetPair` or split the slice using its `SplitAt` method.
 
 ## Handle I/O and release on both paths
@@ -67,6 +68,6 @@ test "counts from two joined tasks" (sys: &System) {
 }
 ```
 
-For tasks returning `E!void`, use `try scope group := io.ScopeOf[E]() { ... }` when one failure should cancel siblings and propagate. For independent failures, store each outcome in a separate result slot and examine them after the join. Match the error policy to the operation. Preserve a failing `mk test --sim SEED` seed for scheduling- or I/O-dependent tests.
+For tasks returning `E!void`, use `try scope group := io.ScopeOf[E]() { ... }` when one failure should cancel siblings and propagate. To report independent failures, give each task a separate parent-owned `?E`, initially `none`. Handle the fallible call inside a `void` task with `else e { *failed = some(e) }` and read the slots after the join.
 
-For field-specific flows, linear containers, and more complex tasks, consult the upstream [memory rules](https://github.com/zerodayokay/Mk-Lang/blob/559c14cd1f84f67b1c7a6082a4d57989a2d564e1/doc/memory.md) and [worked I/O and task recipes](https://github.com/zerodayokay/Mk-Lang/blob/559c14cd1f84f67b1c7a6082a4d57989a2d564e1/doc/cookbook.md).
+For field-specific flows, linear containers, and more complex tasks, consult the upstream [memory rules](https://github.com/zerodayokay/Mk-Lang/blob/7d05aef3821b5f1349fbb18b136ea18ade445810/doc/memory.md) and [worked I/O and task recipes](https://github.com/zerodayokay/Mk-Lang/blob/7d05aef3821b5f1349fbb18b136ea18ade445810/doc/cookbook.md).

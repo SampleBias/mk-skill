@@ -5,7 +5,7 @@ description: Write, build, test, and debug programs in the Mk systems programmin
 
 # Programming in Mk
 
-Start with the project's `pkg.mk`, nearby `.mk` files, and `mk version`. The latter should identify the Mk compiler and its LLVM tools. Follow the project's declared minimum and check unfamiliar calls against the compiler that will build the program. This skill's baseline is Mk 0.6.0 at [upstream commit 559c14c](https://github.com/zerodayokay/Mk-Lang/tree/559c14cd1f84f67b1c7a6082a4d57989a2d564e1).
+Start with the project's `pkg.mk`, nearby `.mk` files, and `mk version`. The latter should identify the Mk compiler and its LLVM tools. Follow the project's declared minimum and check unfamiliar calls against the compiler that will build the program. This skill covers Mk 0.7.1 at [upstream commit 7d05aef](https://github.com/zerodayokay/Mk-Lang/tree/7d05aef3821b5f1349fbb18b136ea18ade445810).
 
 ## Start a program
 
@@ -17,7 +17,7 @@ export Main(sys: &System): WriteError!void {
 }
 ```
 
-Run `mk run main.mk -- red green` and expect `2 arguments`. For a multi-file application, `mk new NAME` creates the manifest and bin root. Open the [complete linepick package](assets/linepick/pkg.mk) for a working boundary between a [CLI with file I/O](assets/linepick/src/main.mk) and a [search module with tests](assets/linepick/src/search/search.mk). It uses only the embedded standard library. To exercise it with a particular compiler, run `python3 scripts/check-example.py --mk /path/to/mk` from this skill's directory.
+Run `mk run main.mk -- red green` and expect `2 arguments`. For a multi-file application, `mk new NAME` creates the manifest and bin root. Open the [complete linepick package](assets/linepick/pkg.mk) for a working boundary between a [CLI with file I/O](assets/linepick/src/main.mk) and a [search module with tests](assets/linepick/src/search/search.mk). It uses only the embedded standard library and runs on Mk 0.6.0 and 0.7.1. To exercise it with a particular compiler, run `python3 scripts/check-example.py --mk /path/to/mk` from this skill's directory.
 
 ## Work from compiler evidence
 
